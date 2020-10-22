@@ -1,0 +1,6 @@
+nb_nurses = 6;
+nb_days = 7;
+
+day_shift = 2;
+lb_nightshift = 2;
+ub_nightshift = 3;
