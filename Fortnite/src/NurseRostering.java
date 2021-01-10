@@ -1,5 +1,8 @@
 
+import org.chocosolver.sat.SatFactory;
 import org.chocosolver.solver.Model;
+import org.chocosolver.solver.constraints.Constraint;
+import org.chocosolver.solver.constraints.nary.cnf.LogOp;
 import org.chocosolver.solver.variables.IntVar;
 import org.chocosolver.util.ESat;
 import org.kohsuke.args4j.Option;
@@ -14,6 +17,7 @@ public class NurseRostering extends AbstractProblem {
 
 
 
+	@SuppressWarnings("null")
 	@Override
 	public void buildModel() {
 
@@ -30,26 +34,69 @@ public class NurseRostering extends AbstractProblem {
 		int day = 1;
 		int night = 2;
 		int dayoff = 3;
+		x = new IntVar[nb_nurses][nb_days];
+		model = new Model("NurseRostering");
 		
-		model = new Model();
-
+		int[] domaine = {day,night,dayoff};
+		
+		
+		
+		for(int n = 0; n < nb_nurses; n++){
+			for(int d = 0; d < nb_days; d++){
+				x[n][d] = model.intVar("N"+n+"D"+d,domaine);
+			}
+    	}
+		
+		
 	//Variables
+
+		// Constraint1: In each four day period a n must have at least one day off
+		for(int n = 0; n < nb_nurses; n++) {
+			for(int d = 0; d < nb_days-3; d++) {
+				model.ifThen(model.and(
+						model.arithm(x[n][d], "<", 3), 
+						model.arithm(x[n][d+1], "<", 3), 
+						model.arithm(x[n][d+2], "<", 3)) , 
+						model.arithm(x[n][d+3], "=", 3)  );
+			}
+		}
 		
-		// Constraint1: In each four day period a nurse must have at least one day off
-
-		//TODO
-
 		// Constraint2: no nurse can be scheduled for 3 night shifts in a row
+		for(int n = 0; n < nb_nurses; n++) {
+			for(int d = 0; d < nb_days-2; d++) {
+				model.ifThen(model.and(
+						model.arithm(x[n][d], "=", 2),
+						model.arithm(x[n][d+1], "=", 2)), 
+						model.arithm(x[n][d+2],"!=",2));
+			}
+		}
 
-		//TODO
+		// Constraint3: no nurse can be scheduled for a day shift after a night shift	
+		for(int n = 0; n < nb_nurses; n++) {
+			for(int dayT = 0; dayT < nb_days-1; dayT++) {
+				model.ifThen(
+						model.arithm(x[n][dayT], "=", 2), 
+						model.arithm(x[n][dayT+1],"!=",1));
+			}
+		}
 
-		// Constraint3: no nurse can be scheduled for a day shift after a night shift
-
-		//TODO
-
+		
+		
 		// Constraint4: day shift size and min/max night shift size
-
-		//TODO
+		IntVar[] nsT = new IntVar[nb_nurses];
+		for(int dayT = 0; dayT < nb_days; dayT++) {
+			for(int n = 0; n < nb_nurses; n++) {
+				nsT[n] = x[n][dayT];
+			}
+			if(day_shift > 0 && lb_nightshift > 0 && ub_nightshift > 0) {
+				model.count(1, nsT, model.intVar(day_shift)).post();
+				model.not(model.count(1, nsT, model.intVar(day_shift+1))).post();
+				
+				model.count(2, nsT, model.intVar(lb_nightshift)).post();
+				model.not(model.count(2, nsT, model.intVar(ub_nightshift))).post();
+			}
+		}
+		
 
 	}
 
@@ -63,7 +110,25 @@ public class NurseRostering extends AbstractProblem {
 
 		model.getSolver().solve();
 
-		//printSolution
+		// Affichage
+		for(int n = 0; n < nb_nurses; n++){
+			for(int d = 0; d < nb_days; d++){
+				switch(x[n][d].getValue()) {
+					case 1:
+						System.out.print("d" +" | ");
+						break;
+					case 2:
+						System.out.print("n" +" | ");
+						break;
+					case 3:
+						System.out.print("o" +" | ");
+						break;
+				}
+			}
+			
+			System.out.println(" ");
+    	}
+		
 
 		model.getSolver().printStatistics();
 	}
