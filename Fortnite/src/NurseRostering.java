@@ -73,10 +73,10 @@ public class NurseRostering extends AbstractProblem {
 
 		// Constraint3: no nurse can be scheduled for a day shift after a night shift	
 		for(int n = 0; n < nb_nurses; n++) {
-			for(int dayT = 0; dayT < nb_days-1; dayT++) {
+			for(int d = 0; d < nb_days-1; d++) {
 				model.ifThen(
-						model.arithm(x[n][dayT], "=", 2), 
-						model.arithm(x[n][dayT+1],"!=",1));
+						model.arithm(x[n][d], "=", 2), 
+						model.arithm(x[n][d+1],"!=",1));
 			}
 		}
 
